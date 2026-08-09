@@ -3,16 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>건물에너지 AI 체험 — 사람 vs AI 제어 게임 · 고장 찾기 퀴즈</title>
+<title>건물에너지 AI 체험 — 사람 vs AI 운전계획 대결 · AI 관제센터</title>
 <style>
-  /* ==================== 디자인 토큰 (dataviz 참조 팔레트) ==================== */
+  /* ==================== 디자인 토큰 ==================== */
   :root{
     color-scheme: light;
     --surface-1:#fcfcfb; --page:#f9f9f7;
     --ink-1:#0b0b0b; --ink-2:#52514e; --ink-3:#898781;
     --grid:#e1e0d9; --axis:#c3c2b7; --border:rgba(11,11,11,0.10);
-    --s1:#2a78d6;  /* 사람 / 기본 계열 (blue) */
-    --s2:#eb6834;  /* 외기온도 (orange) */
+    --s1:#2a78d6;  /* 사람 (blue) */
+    --s2:#eb6834;  /* 외기 (orange) */
     --s3:#1baf7a;  /* AI (aqua) */
     --good:#0ca30c; --warn:#fab219; --serious:#ec835a; --critical:#d03b3b;
     --band:#f0efec;
@@ -29,7 +29,6 @@
   header.top h1{font-size:1.45rem; font-weight:800; margin-top:2px;}
   header.top p{color:var(--ink-2); font-size:.95rem; margin-top:4px;}
 
-  /* 탭 */
   .tabs{display:flex; gap:8px; margin:18px 0 16px; border-bottom:1px solid var(--grid);}
   .tab-btn{
     appearance:none; border:none; background:none; cursor:pointer;
@@ -45,7 +44,6 @@
   .muted{color:var(--ink-2); font-size:.93rem;}
   .small{font-size:.85rem; color:var(--ink-3);}
 
-  /* 스탯 타일 */
   .tiles{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin:12px 0;}
   .tile{background:var(--surface-1); border:1px solid var(--border); border-radius:12px; padding:12px 14px;}
   .tile .lab{font-size:.8rem; color:var(--ink-3);}
@@ -53,24 +51,20 @@
   .tile .sub{font-size:.78rem; color:var(--ink-2);}
   .tile.hl{border-color:var(--s1);}
 
-  /* 컨트롤 */
-  .controls{display:flex; flex-wrap:wrap; align-items:center; gap:14px; margin:10px 0;}
+  .controls{display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin:10px 0;}
   .btn{
     appearance:none; cursor:pointer; border-radius:10px; border:1px solid var(--border);
     padding:10px 18px; font-size:1rem; font-weight:700; background:var(--surface-1); color:var(--ink-1);
   }
   .btn.primary{background:var(--s1); border-color:var(--s1); color:#fff;}
   .btn.ai{background:var(--s3); border-color:var(--s3); color:#fff;}
+  .btn.alarm{background:var(--critical); border-color:var(--critical); color:#fff;}
+  .btn.sm{padding:6px 12px; font-size:.85rem; font-weight:600; color:var(--ink-2);}
   .btn:disabled{opacity:.4; cursor:not-allowed;}
-  .sp-box{display:flex; align-items:center; gap:10px; flex:1; min-width:260px;}
-  .sp-box input[type=range]{flex:1; accent-color:var(--s1); height:34px;}
-  .sp-val{font-size:1.35rem; font-weight:800; min-width:84px; text-align:center;
-          background:var(--band); border-radius:10px; padding:4px 8px;}
   .speed{display:flex; gap:4px;}
   .speed button{font-size:.82rem; padding:6px 10px; border-radius:8px; border:1px solid var(--border); background:var(--surface-1); cursor:pointer; color:var(--ink-2);}
   .speed button.on{background:var(--ink-1); color:#fff; border-color:var(--ink-1);}
 
-  /* 상태 배지 */
   .badges{display:flex; flex-wrap:wrap; gap:8px; margin:8px 0 2px;}
   .badge{display:inline-flex; align-items:center; gap:6px; font-size:.88rem; font-weight:600;
          border:1px solid var(--border); border-radius:999px; padding:4px 12px; background:var(--surface-1); color:var(--ink-2);}
@@ -78,8 +72,8 @@
 
   svg text{font-family:inherit;}
   .chart-box{overflow-x:auto;}
+  #sched-editor{touch-action:none; cursor:crosshair;}
 
-  /* 결과 테이블 */
   table.res{width:100%; border-collapse:collapse; margin-top:10px; font-variant-numeric:tabular-nums;}
   table.res th, table.res td{padding:8px 10px; text-align:right; border-bottom:1px solid var(--grid); font-size:.95rem;}
   table.res th:first-child, table.res td:first-child{text-align:left;}
@@ -88,28 +82,27 @@
 
   .callout{border-left:4px solid var(--s1); background:var(--band); border-radius:0 10px 10px 0;
            padding:12px 14px; margin:12px 0; font-size:.95rem;}
+  .callout.red{border-left-color:var(--critical); background:#fbeaea;}
+  .callout.green{border-left-color:var(--good); background:#e9f6e9;}
   .callout b{font-weight:800;}
   .hidden{display:none !important;}
 
-  /* FDD 카드 그리드 */
-  .fdd-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:12px; margin-top:10px;}
-  .ahu-card{background:var(--surface-1); border:2px solid var(--border); border-radius:12px; padding:10px 12px; cursor:pointer; transition:border-color .12s;}
-  .ahu-card:hover{border-color:var(--ink-3);}
-  .ahu-card.sel{border-color:var(--s1);}
-  .ahu-card.correct{border-color:var(--good);}
-  .ahu-card.wrong{border-color:var(--critical);}
-  .ahu-card h4{font-size:.98rem; font-weight:800; display:flex; justify-content:space-between; align-items:center;}
+  .fdd-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(430px,1fr)); gap:12px; margin-top:10px;}
+  .ahu-card{background:var(--surface-1); border:2px solid var(--border); border-radius:12px; padding:10px 12px;}
+  .ahu-card.alarm{border-color:var(--critical);}
+  .ahu-card.repair{border-color:var(--warn);}
+  .ahu-card h4{font-size:.95rem; font-weight:800; display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;}
   .ahu-tag{font-size:.75rem; font-weight:700; border-radius:999px; padding:2px 10px;}
   .tag-ok{background:#e2f4e2; color:#006300;}
   .tag-bad{background:#fbe3e3; color:#a12727;}
-  .lvl-row{display:flex; gap:8px; margin:8px 0;}
-  .lvl-btn{border:1px solid var(--border); background:var(--surface-1); border-radius:10px; padding:8px 14px; cursor:pointer; font-weight:700; font-size:.92rem; color:var(--ink-2);}
-  .lvl-btn.on{background:var(--s1); border-color:var(--s1); color:#fff;}
+  .tag-rep{background:#fdf3d7; color:#8a5c00;}
+  .tag-off{background:var(--band); color:var(--ink-3);}
 
   footer{margin-top:28px; color:var(--ink-3); font-size:.8rem; text-align:center;}
   @media (max-width:640px){
     html{font-size:15px;}
     .tile .val{font-size:1.25rem;}
+    .fdd-grid{grid-template-columns:1fr;}
   }
 </style>
 </head>
@@ -119,62 +112,54 @@
 <header class="top">
   <div class="kicker">부경대학교 건축공학과 · 건축환경설비실무 · 1주차 체험 데모</div>
   <h1>건물에너지 AI 체험관</h1>
-  <p>AI가 건물 설비를 어떻게 바꾸는지, 직접 겪어 봅시다. ① 하루 동안 건물 냉방을 직접 운전해 AI와 대결하고 ② 고장난 공조기를 눈으로 찾아본 뒤 AI의 진단과 비교합니다.</p>
+  <p>AI가 건물 설비를 어떻게 바꾸는지, 직접 겪어 봅시다. ① 내일의 냉방 운전계획표를 직접 설계해 AI와 대결하고 ② AI 관제센터가 고장을 감지→진단→조치하는 과정을 지켜봅니다.</p>
 </header>
 
 <div class="tabs">
-  <button class="tab-btn active" data-tab="mpc">① 사람 vs AI 제어 대결</button>
-  <button class="tab-btn" data-tab="fdd">② 고장 찾기 퀴즈 (FDD)</button>
+  <button class="tab-btn active" data-tab="mpc">① 사람 vs AI 운전계획 대결</button>
+  <button class="tab-btn" data-tab="fdd">② AI 관제센터 (FDD)</button>
 </div>
 
-<!-- ==================== 탭 1 : MPC 게임 ==================== -->
+<!-- ==================== 탭 1 : MPC 스케줄 대결 ==================== -->
 <section class="panel active" id="panel-mpc">
 
   <div class="card">
-    <h2>미션 — 한여름 사무실 건물의 하루(24시간)를 운전하세요</h2>
+    <h2>미션 — 한여름 사무실 건물, 내일의 운전계획표를 설계하세요</h2>
     <p class="muted">
-      당신은 건물 관리자입니다. 아래 슬라이더로 <b>냉방 설정온도</b>를 실시간 조절해
+      당신은 건물 관리자입니다. 아래 계획표에서 <b>시간대별 냉방 설정온도와 ON/OFF(24시간)</b>를 드래그로 설계한 뒤 하루를 실행해
       <b>총비용(전기요금 + 민원 페널티)</b>을 최소화하세요.
-      직원 근무시간(08–18시)에 실내온도가 24–26&nbsp;°C를 벗어나면 <b>민원 페널티(3,000원/°C·h)</b>가 쌓입니다.
-      전기요금은 시간대별로 다릅니다(경부하 60 → 중간 120 → 최대부하 220원/kWh).
-      아래 차트에 <b>내일의 외기온도 예보와 요금표가 미리 공개</b>되어 있습니다 — 이 정보를 활용할 수 있을까요?
+      근무시간(08–18시)에 실내온도가 24–26&nbsp;°C를 벗어나면 <b>민원 페널티(3,000원/°C·h)</b>가 쌓입니다.
+      <b>내일의 외기온도 예보와 시간대별 요금표는 미리 공개</b>되어 있습니다(경부하 60 → 중간 120 → 최대부하 220원/kWh).
+      몇 번이든 계획을 고쳐 다시 도전할 수 있습니다. 준비가 되면 <b>같은 조건으로 AI(MPC)가 도전</b>합니다 — AI도 똑같이 시간대별 설정온도 계획표를 제출합니다.
     </p>
-    <div class="badges" id="live-badges">
-      <span class="badge">🕐 <b id="b-time">00:00</b></span>
-      <span class="badge"><span class="dot" style="background:var(--s2)"></span>외기 <b id="b-tout">–</b></span>
-      <span class="badge"><span class="dot" style="background:var(--s1)"></span>실내 <b id="b-tin">–</b></span>
-      <span class="badge" id="b-price-badge">요금 <b id="b-price">–</b></span>
-      <span class="badge" id="b-occ">재실 전</span>
-      <span class="badge" id="b-comfort"><span class="dot" id="b-comfort-dot" style="background:var(--axis)"></span><b id="b-comfort-txt">대기 중</b></span>
-    </div>
+  </div>
 
+  <div class="card">
+    <h3>① 운전계획표 — 드래그해서 시간대별 설정온도를 그리세요. 맨 위 <b>OFF 칸</b>까지 올리면 가동 정지 <span class="small" id="sched-readout"></span></h3>
+    <div class="chart-box"><div id="sched-editor"></div></div>
     <div class="controls">
-      <button class="btn primary" id="btn-start">▶ 하루 시작</button>
-      <div class="sp-box">
-        <span class="small">설정온도</span>
-        <input type="range" id="sp-slider" min="20" max="30" step="0.5" value="28">
-        <span class="sp-val" id="sp-val">28.0 °C</span>
-      </div>
-      <div class="speed" id="speed-box">
-        <button data-ms="300" class="on">보통</button>
-        <button data-ms="140">빠름</button>
-        <button data-ms="60">매우 빠름</button>
-      </div>
+      <button class="btn primary" id="btn-run">▶ 이 계획으로 하루 실행</button>
+      <button class="btn sm" data-preset="flat28">전체 28°C</button>
+      <button class="btn sm" data-preset="office25">주간 25°C · 야간 OFF</button>
+      <button class="btn sm" data-preset="all26">주간 26°C · 야간 OFF</button>
+      <span class="small" id="attempt-info">시도 0회</span>
     </div>
+  </div>
 
+  <div class="card">
+    <h3>② 실행 결과</h3>
     <div class="tiles">
-      <div class="tile"><div class="lab">전기요금 (누적)</div><div class="val" id="t-cost">0원</div><div class="sub" id="t-kwh">0.0 kWh</div></div>
-      <div class="tile"><div class="lab">민원 페널티 (누적)</div><div class="val" id="t-pen">0원</div><div class="sub" id="t-disc">불쾌적 0.0 °C·h</div></div>
-      <div class="tile hl"><div class="lab">총비용 (낮을수록 승리)</div><div class="val" id="t-total">0원</div><div class="sub">전기요금 + 페널티</div></div>
+      <div class="tile"><div class="lab">이번 시도 — 전기요금</div><div class="val" id="t-cost">–</div><div class="sub" id="t-kwh">–</div></div>
+      <div class="tile"><div class="lab">이번 시도 — 민원 페널티</div><div class="val" id="t-pen">–</div><div class="sub" id="t-disc">–</div></div>
+      <div class="tile hl"><div class="lab">이번 시도 — 총비용</div><div class="val" id="t-total">–</div><div class="sub">낮을수록 승리</div></div>
+      <div class="tile"><div class="lab">내 최고 기록</div><div class="val" id="t-best">–</div><div class="sub" id="t-best-sub">아직 실행 전</div></div>
       <div class="tile"><div class="lab">AI(MPC) 총비용</div><div class="val" id="t-ai">???</div><div class="sub" id="t-ai-sub">아직 도전 전</div></div>
     </div>
-
     <div class="chart-box"><div id="mpc-chart"></div></div>
-
     <div class="controls" style="margin-top:6px;">
       <button class="btn ai" id="btn-ai" disabled>🤖 AI(MPC)에게 도전시키기</button>
-      <button class="btn" id="btn-reset">다시 하기</button>
       <button class="btn" id="btn-why" disabled>AI 전략 해설 보기</button>
+      <button class="btn" id="btn-reset">처음부터 다시</button>
     </div>
 
     <div id="result-box" class="hidden">
@@ -186,9 +171,9 @@
     <div id="why-box" class="hidden">
       <div class="callout">
         <b>AI(MPC)의 전략 — "미래를 알면 미리 움직인다"</b><br>
-        ① <b>새벽~오전(경부하·중간부하)</b>: 전기가 쌀 때 설정온도를 확 낮춰 건물 구조체(콘크리트)를 <b>미리 차갑게</b> 만들어 둡니다(예냉, pre-cooling).<br>
-        ② <b>11–18시(최대부하)</b>: 비싼 시간에는 냉방을 줄이고, 축적해 둔 냉기(축열)로 버팁니다. 실내온도는 쾌적범위 안에서만 서서히 올라갑니다.<br>
-        ③ 이것이 가능한 이유: AI는 <b>날씨 예보 + 요금표 + 건물 물리 모델</b>로 24시간 뒤까지 내다보고 매 순간 최적의 수를 두기 때문입니다. 이런 제어 방식을 <b>모델예측제어(MPC, Model Predictive Control)</b>라고 합니다.
+        ① <b>새벽~오전(전기가 쌀 때)</b>: 설정온도를 확 낮춰 건물 구조체(콘크리트)를 <b>미리 차갑게</b> 만들어 둡니다(예냉, pre-cooling).<br>
+        ② <b>11–18시(최대부하)</b>: 비싼 시간에는 설정온도를 높여 냉방을 줄이고, 축적해 둔 냉기(축열)로 버팁니다. 실내온도는 쾌적범위 안에서만 서서히 올라갑니다.<br>
+        ③ 위 계획표에 <b>AI가 제출한 답안지(초록 계단선)</b>가 겹쳐 표시되어 있습니다. AI는 <b>날씨 예보 + 요금표 + 건물 물리 모델</b>로 24시간 전체를 내다보고 이 계획을 계산했습니다. 이런 제어 방식을 <b>모델예측제어(MPC, Model Predictive Control)</b>라고 합니다.
       </div>
     </div>
   </div>
@@ -198,40 +183,37 @@
     <p class="muted">
       화면 속 건물은 열용량·열저항으로 이루어진 실제 열역학 모델(RC 모델)이고, AI는 미리 짜인 각본이 아니라
       <b>지금 이 브라우저에서 동적계획법(dynamic programming)으로 24시간 최적화를 직접 계산</b>합니다.
+      사람과 AI는 완전히 같은 조건 — 같은 건물, 같은 날씨, 같은 요금표, 같은 조작(시간대별 설정온도) — 으로 대결합니다.
       구글 데이터센터에서는 이런 AI 제어로 냉방 에너지를 약 40% 절감했습니다(DeepMind, 2016).
-      이번 학기에 배우는 데이터 해석·예측모델이 바로 이 AI의 핵심 부품입니다.
     </p>
   </div>
 
 </section>
 
-<!-- ==================== 탭 2 : FDD 퀴즈 ==================== -->
+<!-- ==================== 탭 2 : FDD 관제센터 ==================== -->
 <section class="panel" id="panel-fdd">
 
   <div class="card">
-    <h2>미션 — 고장난 공조기(AHU)를 찾아라</h2>
+    <h2>미션 — AI 관제센터: 고장을 실시간으로 잡아라</h2>
     <p class="muted">
-      건물 지하 기계실에는 공조기(AHU) 4대가 돌아갑니다. 각 그래프는 <b>급기온도(공조기가 불어넣는 공기 온도)</b>의
-      실측 기록입니다. 정상이라면 운전시간(07–19시)에 약 16&nbsp;°C를 유지해야 합니다.
-      <b>이 중 한 대가 고장</b>입니다. 그래프를 눌러 범인을 지목하세요.
+      건물 기계실의 공조기(AHU) 4대를 관제합니다. 각 카드의 위쪽은 <b>급기온도 실측값</b>(운전시간 07–19시에 약 16°C가 정상),
+      아래쪽은 <b>AI의 잔차 감시</b>(실측 − 예측모델의 정상 예측)입니다.
+      먼저 AI 감시를 끈 채로 며칠 지켜보세요 — <b>여러분의 눈에 이상이 보이면 즉시 외치세요.</b>
+      그다음 <b>AI 감시 ON</b>을 켜면, AI가 감지한 이상·진단·권장조치가 표시됩니다.
     </p>
-    <div class="lvl-row">
-      <button class="lvl-btn on" id="lvl1-btn">1단계 · 견습 관리자 (3일치 데이터)</button>
-      <button class="lvl-btn" id="lvl2-btn">2단계 · 베테랑도 어렵다 (7일치 데이터)</button>
+    <div class="controls">
+      <button class="btn primary" id="btn-mon">▶ 관제 시작 (12일 운전)</button>
+      <button class="btn" id="btn-ai-watch" disabled>AI 감시 ON</button>
+      <div class="speed" id="fdd-speed">
+        <button data-ms="90" class="on">보통</button>
+        <button data-ms="40">빠름</button>
+      </div>
+      <button class="btn" id="btn-fdd-reset">다시 하기</button>
+      <span class="badge">🕐 <b id="mon-clock">1일차 00시</b></span>
+      <span class="badge" id="mon-status"><span class="dot" style="background:var(--axis)"></span><b>대기 중</b></span>
     </div>
     <div class="fdd-grid" id="fdd-grid"></div>
-    <div id="fdd-feedback" class="hidden"></div>
-    <div class="controls" style="margin-top:10px;">
-      <button class="btn ai hidden" id="btn-fdd-ai">🤖 AI 진단 결과 보기 (잔차 분석)</button>
-      <button class="btn" id="btn-fdd-reset">다시 하기</button>
-    </div>
-    <div id="fdd-ai-box" class="hidden">
-      <h3 style="margin-top:14px;">AI의 진단 — 잔차(residual) 분석</h3>
-      <p class="muted">AI는 정상 상태를 학습한 <b>예측모델</b>로 "지금쯤 이 온도여야 한다"를 계산하고,
-        실측값과의 차이(<b>잔차 = 실측 − 예측</b>)를 감시합니다. 잔차가 허용범위(회색 띠)를 벗어나면 경보를 울립니다.</p>
-      <div class="fdd-grid" id="fdd-res-grid"></div>
-      <div class="callout" id="fdd-ai-verdict"></div>
-    </div>
+    <div id="alarm-box"></div>
   </div>
 
   <div class="card">
@@ -239,8 +221,9 @@
     <p class="muted">
       실제 건물 설비 고장의 대부분은 이렇게 <b>서서히, 조용히</b> 진행됩니다. 사람이 알아차렸을 때는 이미
       에너지가 수개월간 새고 있던 경우가 많습니다(상업건물 에너지의 15–30%가 고장·부적절 운전으로 낭비된다고 보고됩니다).
-      이렇게 데이터로 고장을 찾아내는 기술을 <b>FDD(Fault Detection and Diagnosis, 고장 감지·진단)</b>라고 하며,
-      그 핵심 부품이 이번 학기에 만드는 <b>예측모델(회귀)</b>과 <b>분류모델</b>입니다.
+      이렇게 데이터로 고장을 <b>감지(Detection) → 진단(Diagnosis) → 조치(Response)</b>하는 기술을
+      <b>FDD(Fault Detection and Diagnosis)</b>라고 하며, 그 핵심 부품이 이번 학기에 만드는
+      <b>예측모델(회귀)</b>과 <b>분류모델</b>입니다.
     </p>
   </div>
 
@@ -256,14 +239,12 @@
    ============================================================ */
 const $ = s => document.querySelector(s);
 const fmtW = n => Math.round(n).toLocaleString('ko-KR') + '원';
-// 시드 고정 난수 (수업·PPT와 동일한 데이터 재현을 위해)
 function mulberry32(seed){ return function(){ let t = seed += 0x6D2B79F5;
   t = Math.imul(t ^ t >>> 15, t | 1); t ^= t + Math.imul(t ^ t >>> 7, t | 61);
   return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 function gauss(rnd){ let u=0,v=0; while(u===0)u=rnd(); while(v===0)v=rnd();
   return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); }
 
-/* 탭 전환 */
 document.querySelectorAll('.tab-btn').forEach(b => b.addEventListener('click', () => {
   document.querySelectorAll('.tab-btn').forEach(x => x.classList.toggle('active', x===b));
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
@@ -280,10 +261,10 @@ const P = {
 const tOut = h => 29 + 5*Math.sin((h-9.5)/24*2*Math.PI);
 const qInt = h => (h>=8 && h<18) ? 2.5 + 1.5*Math.exp(-Math.pow(h-13,2)/8) : 0.5;
 function price(h){ if(h>=11 && h<18) return 220; if((h>=8&&h<11)||(h>=18&&h<22)) return 120; return 60; }
-const priceName = p => p===220 ? '최대부하 220원' : (p===120 ? '중간부하 120원' : '경부하 60원');
 
 function stepSim(Tin, h, Tsp){
-  const Qcool = Math.min(Math.max(P.Kp*(Tin-Tsp), 0), P.Qmax);
+  // Tsp === null → 냉방 OFF (가동 정지)
+  const Qcool = Tsp===null ? 0 : Math.min(Math.max(P.Kp*(Tin-Tsp), 0), P.Qmax);
   const TinNext = Tin + ((tOut(h)-Tin)/P.R + qInt(h) - Qcool) * P.dt / P.C;
   const elec = Qcool/P.COP*P.dt;
   const cost = elec*price(h);
@@ -294,10 +275,19 @@ function stepSim(Tin, h, Tsp){
   }
   return {TinNext, elec, cost, pen: disc*P.penalty, disc};
 }
-
-/* ---------- MPC : 동적계획법 (실시간 계산) ---------- */
-function mpcOptimize(){
-  const SPS=[]; for(let s=20;s<=30;s+=0.5) SPS.push(s);
+function simulateDay(schedule){ // 시간별 setpoint 24개 → 하루 결과
+  let Tin=P.T0, cost=0,pen=0,kwh=0,disc=0; const traj=[[0,Tin]];
+  for(let i=0;i<96;i++){
+    const h=i*P.dt, sp=schedule[Math.floor(h)];
+    const r=stepSim(Tin,h,sp);
+    cost+=r.cost; pen+=r.pen; kwh+=r.elec; disc+=r.disc; Tin=r.TinNext;
+    traj.push([h+P.dt, Tin]);
+  }
+  return {cost,pen,kwh,disc,total:cost+pen,traj};
+}
+function mpcOptimize(){ // 동적계획법 — 실시간 최적화 (OFF 포함)
+  const OFF=99; // 정책 배열(Float64Array)에 저장하기 위한 OFF 코드값
+  const SPS=[OFF]; for(let s=20;s<=30;s+=0.5) SPS.push(s);
   const TMIN=18, TMAX=36, DTS=0.1, NS=Math.round((TMAX-TMIN)/DTS)+1;
   const idx = T => Math.max(0, Math.min(NS-1, Math.round((T-TMIN)/DTS)));
   let V = new Float64Array(NS);
@@ -308,8 +298,9 @@ function mpcOptimize(){
       const T = TMIN + s*DTS;
       let best=Infinity, bestSp=26;
       for(const sp of SPS){
+        const spv = sp===OFF ? null : sp;
         let Tin=T, c=0;
-        for(let k=0;k<4;k++){ const r=stepSim(Tin,hour+k*P.dt,sp); c+=r.cost+r.pen; Tin=r.TinNext; }
+        for(let k=0;k<4;k++){ const r=stepSim(Tin,hour+k*P.dt,spv); c+=r.cost+r.pen; Tin=r.TinNext; }
         const v = c + V[idx(Tin)];
         if(v<best){ best=v; bestSp=sp; }
       }
@@ -319,35 +310,138 @@ function mpcOptimize(){
   }
   let Tin=P.T0; const schedule=[];
   for(let hour=0;hour<24;hour++){
-    const sp = policy[hour][idx(Tin)]; schedule.push(sp);
-    for(let k=0;k<4;k++) Tin = stepSim(Tin,hour+k*P.dt,sp).TinNext;
+    const sp = policy[hour][idx(Tin)];
+    const spv = sp===OFF ? null : sp;
+    schedule.push(spv);
+    for(let k=0;k<4;k++) Tin = stepSim(Tin,hour+k*P.dt,spv).TinNext;
   }
   return schedule;
 }
 
 /* ============================================================
-   PART 2. MPC 게임 차트 (SVG 직접 렌더링)
+   PART 2. 운전계획표 편집기 (드래그)
+   ============================================================ */
+const G = {
+  schedule: Array(24).fill(28),
+  aiSchedule: null, ai: null,
+  traj: [], aiTraj: [],
+  attempts: 0, best: null, bestTraj: null,
+  showWhy: false, lastRun: null, animTimer: null,
+};
+
+const ED = { W:1020, H:290, L:52, R:14, T:26, B:26, OFFH:34 };
+const SPMIN=20, SPMAX=30;
+const EX = h => ED.L + (ED.W-ED.L-ED.R)*h/24;
+const spTop = () => ED.T + ED.OFFH + 10;           // 설정온도 영역의 상단
+const EY = v => spTop() + (ED.H-spTop()-ED.B)*(1-(v-SPMIN)/(SPMAX-SPMIN));
+const yOFF = () => ED.T + ED.OFFH/2;               // OFF 칸의 중앙 y
+
+function renderEditor(){
+  const s=[];
+  s.push(`<svg id="ed-svg" viewBox="0 0 ${ED.W} ${ED.H}" style="width:100%; min-width:640px; display:block;" font-size="12">`);
+  s.push(`<rect x="0" y="0" width="${ED.W}" height="${ED.H}" fill="var(--surface-1)" rx="10"/>`);
+  // 요금 배경 (OFF 칸 + 설정온도 영역 전체)
+  s.push(`<rect x="${EX(11)}" y="${ED.T}" width="${EX(18)-EX(11)}" height="${ED.H-ED.T-ED.B}" fill="#eda100" opacity="0.13"/>`);
+  s.push(`<rect x="${EX(8)}" y="${ED.T}" width="${EX(11)-EX(8)}" height="${ED.H-ED.T-ED.B}" fill="#eda100" opacity="0.06"/>`);
+  s.push(`<rect x="${EX(18)}" y="${ED.T}" width="${EX(22)-EX(18)}" height="${ED.H-ED.T-ED.B}" fill="#eda100" opacity="0.06"/>`);
+  s.push(`<text x="${EX(14.5)}" y="${ED.T-8}" text-anchor="middle" fill="#8a5c00" font-weight="700" font-size="11.5">최대부하 220원/kWh</text>`);
+  s.push(`<text x="${EX(4)}" y="${ED.T-8}" text-anchor="middle" fill="var(--ink-3)" font-size="11.5">경부하 60원</text>`);
+  s.push(`<text x="${EX(21.5)}" y="${ED.T-8}" text-anchor="middle" fill="var(--ink-3)" font-size="11.5">중간 120원</text>`);
+  // OFF 칸
+  s.push(`<rect x="${ED.L}" y="${ED.T}" width="${ED.W-ED.L-ED.R}" height="${ED.OFFH}" fill="var(--band)" rx="6"/>`);
+  s.push(`<line x1="${ED.L}" y1="${ED.T+ED.OFFH+5}" x2="${ED.W-ED.R}" y2="${ED.T+ED.OFFH+5}" stroke="var(--axis)" stroke-width="1" stroke-dasharray="3 3"/>`);
+  s.push(`<text x="${ED.L-8}" y="${yOFF()+4}" text-anchor="end" fill="var(--ink-3)" font-weight="700">OFF</text>`);
+  // 그리드
+  for(let v=20; v<=30; v+=2){
+    s.push(`<line x1="${ED.L}" y1="${EY(v)}" x2="${ED.W-ED.R}" y2="${EY(v)}" stroke="var(--grid)" stroke-width="1"/>`);
+    s.push(`<text x="${ED.L-8}" y="${EY(v)+4}" text-anchor="end" fill="var(--ink-3)">${v}°</text>`);
+  }
+  // 쾌적범위 참조선
+  s.push(`<line x1="${EX(8)}" y1="${EY(24)}" x2="${EX(18)}" y2="${EY(24)}" stroke="var(--good)" stroke-width="1.5" stroke-dasharray="5 4" opacity="0.7"/>`);
+  s.push(`<line x1="${EX(8)}" y1="${EY(26)}" x2="${EX(18)}" y2="${EY(26)}" stroke="var(--good)" stroke-width="1.5" stroke-dasharray="5 4" opacity="0.7"/>`);
+  s.push(`<text x="${EX(18)+4}" y="${EY(25)+4}" fill="var(--good)" font-size="11">쾌적 24–26° (재실)</text>`);
+  for(let h=0;h<=24;h+=3){
+    s.push(`<text x="${EX(h)}" y="${ED.H-8}" text-anchor="middle" fill="var(--ink-3)">${h}시</text>`);
+  }
+  // AI 답안지 오버레이 (OFF는 OFF 칸 높이로 표시)
+  if(G.aiSchedule && G.showWhy){
+    const yAt = sp => sp===null ? yOFF() : EY(sp);
+    let d='';
+    G.aiSchedule.forEach((sp,h)=>{ d += (h?'L':'M')+EX(h)+','+yAt(sp)+' L'+EX(h+1)+','+yAt(sp)+' '; });
+    s.push(`<path d="${d}" fill="none" stroke="var(--s3)" stroke-width="2.5" opacity="0.95"/>`);
+    s.push(`<text x="${EX(0.3)}" y="${yAt(G.aiSchedule[0])+16}" fill="#0d7a52" font-weight="700">AI의 답안지</text>`);
+  }
+  // 내 계획 (막대 + 캡)
+  const bw = (EX(1)-EX(0));
+  G.schedule.forEach((sp,h)=>{
+    if(sp===null){
+      s.push(`<rect x="${EX(h)+1.5}" y="${ED.T+4}" width="${bw-3}" height="${ED.OFFH-8}" fill="var(--ink-3)" opacity="0.22" rx="3"/>`);
+      s.push(`<text x="${EX(h)+bw/2}" y="${yOFF()+4}" text-anchor="middle" fill="var(--ink-2)" font-size="9.5" font-weight="700">OFF</text>`);
+    } else {
+      s.push(`<rect x="${EX(h)+1.5}" y="${EY(sp)}" width="${bw-3}" height="${Math.max(2, EY(SPMIN)-EY(sp))}" fill="var(--s1)" opacity="0.28" rx="3"/>`);
+      s.push(`<rect x="${EX(h)+1.5}" y="${EY(sp)-2}" width="${bw-3}" height="4" fill="var(--s1)" rx="2"/>`);
+      s.push(`<text x="${EX(h)+bw/2}" y="${Math.min(EY(sp)+15, ED.H-ED.B-6)}" text-anchor="middle" fill="var(--s1)" font-size="9.5" font-weight="700">${sp%1?sp.toFixed(1):sp}</text>`);
+    }
+  });
+  s.push('</svg>');
+  $('#sched-editor').innerHTML = s.join('');
+}
+let editorEventsAttached = false;
+function attachEditorEvents(){
+  if(editorEventsAttached) return;
+  editorEventsAttached = true;
+  const svg = $('#sched-editor'); // 지속되는 컨테이너에 부착 (내부 SVG는 매번 재생성됨)
+  let dragging=false;
+  function apply(ev){
+    const r = svg.getBoundingClientRect();
+    const px = (ev.clientX - r.left) / r.width * ED.W;
+    const py = (ev.clientY - r.top) / r.height * ED.H;
+    let h = Math.floor((px - ED.L)/(ED.W-ED.L-ED.R)*24);
+    if(h<0||h>23) return;
+    let v;
+    if(py < spTop()-4){ v = null; } // OFF 칸으로 드래그 → 가동 정지
+    else {
+      v = SPMIN + (1-(py-spTop())/(ED.H-spTop()-ED.B))*(SPMAX-SPMIN);
+      v = Math.round(Math.max(SPMIN, Math.min(SPMAX, v))*2)/2;
+    }
+    if(G.schedule[h]!==v){
+      G.schedule[h]=v;
+      $('#sched-readout').textContent = `${h}시–${h+1}시 → ${v===null?'OFF (정지)':v.toFixed(1)+'°C'}`;
+      renderEditor();
+    }
+  }
+  svg.addEventListener('pointerdown', ev=>{ dragging=true; svg.setPointerCapture(ev.pointerId); apply(ev); ev.preventDefault(); });
+  svg.addEventListener('pointermove', ev=>{ if(dragging) apply(ev); });
+  svg.addEventListener('pointerup',   ()=>{ dragging=false; });
+  svg.addEventListener('pointercancel',()=>{ dragging=false; });
+}
+attachEditorEvents();
+document.querySelectorAll('[data-preset]').forEach(b=>b.addEventListener('click',()=>{
+  const p=b.dataset.preset;
+  if(p==='flat28') G.schedule = Array(24).fill(28);
+  if(p==='office25') G.schedule = Array(24).fill(null).map((_,h)=> (h>=8&&h<18)?25:null);
+  if(p==='all26') G.schedule = Array(24).fill(null).map((_,h)=> (h>=8&&h<18)?26:null);
+  renderEditor();
+}));
+
+/* ============================================================
+   PART 3. 결과 차트
    ============================================================ */
 const CH = { W:1020, H:380, L:52, R:14, T:16, B:24, priceH:46, gap:26 };
 const tempMin=19, tempMax=36;
 const X = h => CH.L + (CH.W-CH.L-CH.R) * h/24;
 const Y = t => CH.T + (CH.H-CH.T-CH.B-CH.priceH-CH.gap) * (1 - (t-tempMin)/(tempMax-tempMin));
 const plotBottom = () => CH.H-CH.B-CH.priceH-CH.gap;
-const PY = p => { const top=CH.H-CH.B-CH.priceH, hgt=CH.priceH; return top + hgt*(1 - p/240); };
-
+const PY = p => { const top=CH.H-CH.B-CH.priceH; return top + CH.priceH*(1 - p/240); };
 function pathFrom(pts, xf, yf){
   return pts.map((p,i)=>(i?'L':'M')+xf(p[0]).toFixed(1)+','+yf(p[1]).toFixed(1)).join(' ');
 }
-
-function renderMpcChart(state){
+function renderMpcChart(){
   const s = [];
   s.push(`<svg viewBox="0 0 ${CH.W} ${CH.H}" style="width:100%; min-width:640px; display:block;" font-size="13">`);
-  // 배경
   s.push(`<rect x="0" y="0" width="${CH.W}" height="${CH.H}" fill="var(--surface-1)" rx="10"/>`);
-  // 쾌적 밴드 (재실시간 × 24-26도)
   s.push(`<rect x="${X(P.occStart)}" y="${Y(P.comfortHi)}" width="${X(P.occEnd)-X(P.occStart)}" height="${Y(P.comfortLo)-Y(P.comfortHi)}" fill="var(--band)"/>`);
-  s.push(`<text x="${X(13)}" y="${Y(25)+4}" text-anchor="middle" fill="var(--ink-3)" font-size="12">쾌적범위 24–26°C (재실 08–18시)</text>`);
-  // 그리드 + 축
+  s.push(`<text x="${X(13)}" y="${Y(24.35)}" text-anchor="middle" fill="var(--ink-3)" font-size="12">쾌적범위 24–26°C (재실 08–18시)</text>`);
   for(let t=20;t<=36;t+=4){
     s.push(`<line x1="${CH.L}" y1="${Y(t)}" x2="${CH.W-CH.R}" y2="${Y(t)}" stroke="var(--grid)" stroke-width="1"/>`);
     s.push(`<text x="${CH.L-8}" y="${Y(t)+4}" text-anchor="end" fill="var(--ink-3)" font-size="12">${t}°</text>`);
@@ -357,7 +451,6 @@ function renderMpcChart(state){
     s.push(`<line x1="${X(h)}" y1="${CH.T}" x2="${X(h)}" y2="${plotBottom()}" stroke="var(--grid)" stroke-width="1" stroke-dasharray="2 4"/>`);
   }
   s.push(`<line x1="${CH.L}" y1="${plotBottom()}" x2="${CH.W-CH.R}" y2="${plotBottom()}" stroke="var(--axis)" stroke-width="1"/>`);
-
   // 요금 스트립
   const strip=[[0,60]]; for(let h=0;h<=24;h+=0.25) strip.push([h,price(Math.min(h,23.99))]);
   s.push(`<path d="${pathFrom(strip, X, PY)} L ${X(24)},${PY(0)} L ${X(0)},${PY(0)} Z" fill="#eda100" opacity="0.25"/>`);
@@ -366,336 +459,369 @@ function renderMpcChart(state){
   s.push(`<text x="${X(3)}" y="${PY(60)-5}" text-anchor="middle" fill="var(--ink-2)" font-size="11">경부하 60</text>`);
   s.push(`<text x="${X(9.4)}" y="${PY(120)-5}" text-anchor="middle" fill="var(--ink-2)" font-size="11">120</text>`);
   s.push(`<text x="${X(14.5)}" y="${PY(220)+14}" text-anchor="middle" fill="#8a5c00" font-size="11" font-weight="700">최대부하 220원/kWh</text>`);
-
-  // 외기온도 예보 (전일 공개)
+  // 외기 예보
   const outPts=[]; for(let h=0;h<=24;h+=0.25) outPts.push([h,tOut(h)]);
   s.push(`<path d="${pathFrom(outPts,X,Y)}" fill="none" stroke="var(--s2)" stroke-width="2" stroke-dasharray="6 4"/>`);
   s.push(`<text x="${X(20.6)+6}" y="${Y(tOut(20.6))-10}" fill="var(--s2)" font-size="12" font-weight="700">외기온도 예보</text>`);
-
-  // AI 궤적 (있으면)
-  if(state.aiTraj.length>1){
-    s.push(`<path d="${pathFrom(state.aiTraj,X,Y)}" fill="none" stroke="var(--s3)" stroke-width="2.5"/>`);
-    const last = state.aiTraj[state.aiTraj.length-1];
-    s.push(`<circle cx="${X(last[0])}" cy="${Y(last[1])}" r="4" fill="var(--s3)" stroke="var(--surface-1)" stroke-width="2"/>`);
-    s.push(`<text x="${X(Math.min(last[0],22))}" y="${Y(last[1])-10}" fill="#0d7a52" font-size="12" font-weight="700">AI (MPC)</text>`);
-  }
-  // 예냉 주석 (AI 해설 모드)
-  if(state.showWhy){
+  // 해설 음영
+  if(G.showWhy){
     s.push(`<rect x="${X(6)}" y="${CH.T}" width="${X(10.5)-X(6)}" height="${plotBottom()-CH.T}" fill="var(--s3)" opacity="0.08"/>`);
     s.push(`<text x="${X(8.25)}" y="${CH.T+16}" text-anchor="middle" fill="#0d7a52" font-size="12" font-weight="700">① 예냉 (싼 전기)</text>`);
     s.push(`<rect x="${X(11)}" y="${CH.T}" width="${X(18)-X(11)}" height="${plotBottom()-CH.T}" fill="#eda100" opacity="0.10"/>`);
     s.push(`<text x="${X(14.5)}" y="${CH.T+16}" text-anchor="middle" fill="#8a5c00" font-size="12" font-weight="700">② 축열로 버티기 (비싼 전기)</text>`);
   }
-  // 사람 궤적
-  if(state.traj.length>1){
-    s.push(`<path d="${pathFrom(state.traj,X,Y)}" fill="none" stroke="var(--s1)" stroke-width="2.5"/>`);
-    const last = state.traj[state.traj.length-1];
+  // AI 궤적
+  if(G.aiTraj.length>1){
+    s.push(`<path d="${pathFrom(G.aiTraj,X,Y)}" fill="none" stroke="var(--s3)" stroke-width="2.5"/>`);
+    const last=G.aiTraj[G.aiTraj.length-1];
+    s.push(`<circle cx="${X(last[0])}" cy="${Y(last[1])}" r="4" fill="var(--s3)" stroke="var(--surface-1)" stroke-width="2"/>`);
+    s.push(`<text x="${X(Math.min(last[0],22))}" y="${Y(last[1])-10}" fill="#0d7a52" font-size="12" font-weight="700">AI (MPC)</text>`);
+  }
+  // 내 궤적
+  if(G.traj.length>1){
+    s.push(`<path d="${pathFrom(G.traj,X,Y)}" fill="none" stroke="var(--s1)" stroke-width="2.5"/>`);
+    const last=G.traj[G.traj.length-1];
     s.push(`<circle cx="${X(last[0])}" cy="${Y(last[1])}" r="5" fill="var(--s1)" stroke="var(--surface-1)" stroke-width="2"/>`);
     s.push(`<text x="${X(Math.min(last[0],22.5))}" y="${Y(last[1])+20}" fill="var(--s1)" font-size="12" font-weight="700">나 (실내온도)</text>`);
-  }
-  // 현재 시각 커서
-  if(state.running || state.finished){
-    const h = state.h;
-    s.push(`<line x1="${X(h)}" y1="${CH.T}" x2="${X(h)}" y2="${plotBottom()}" stroke="var(--ink-1)" stroke-width="1" opacity="0.35"/>`);
   }
   s.push('</svg>');
   $('#mpc-chart').innerHTML = s.join('');
 }
 
 /* ============================================================
-   PART 3. 게임 진행 로직
+   PART 4. 실행 & AI 대결
    ============================================================ */
-const G = {
-  running:false, finished:false, h:0, Tin:P.T0,
-  cost:0, pen:0, kwh:0, disc:0,
-  traj:[], aiTraj:[], timer:null, tickMs:300,
-  ai:null, showWhy:false,
-};
-
-function refreshTiles(){
-  $('#t-cost').textContent = fmtW(G.cost);
-  $('#t-kwh').textContent = G.kwh.toFixed(1)+' kWh';
-  $('#t-pen').textContent = fmtW(G.pen);
-  $('#t-disc').textContent = '불쾌적 '+G.disc.toFixed(1)+' °C·h';
-  $('#t-total').textContent = fmtW(G.cost+G.pen);
+function runMySchedule(){
+  if(G.animTimer) clearInterval(G.animTimer);
+  const res = simulateDay(G.schedule.slice());
+  G.attempts++; G.lastRun = res;
+  $('#attempt-info').textContent = `시도 ${G.attempts}회`;
+  // 궤적 애니메이션 (약 2.5초)
+  G.traj=[]; let i=0;
+  $('#btn-run').disabled=true;
+  G.animTimer=setInterval(()=>{
+    for(let k=0;k<3 && i<res.traj.length;k++,i++) G.traj.push(res.traj[i]);
+    renderMpcChart();
+    if(i>=res.traj.length){
+      clearInterval(G.animTimer); G.animTimer=null;
+      $('#btn-run').disabled=false;
+      finishRun(res);
+    }
+  }, 60);
 }
-function refreshBadges(){
-  const h=G.h;
-  const hh=String(Math.floor(h)).padStart(2,'0'), mm=String(Math.round(h%1*60)).padStart(2,'0');
-  $('#b-time').textContent = hh+':'+mm;
-  $('#b-tout').textContent = tOut(h).toFixed(1)+' °C';
-  $('#b-tin').textContent = G.Tin.toFixed(1)+' °C';
-  $('#b-price').textContent = priceName(price(h));
-  const occ = h>=P.occStart && h<P.occEnd;
-  $('#b-occ').textContent = occ ? '재실 중 (근무시간)' : '비재실';
-  const dot=$('#b-comfort-dot'), txt=$('#b-comfort-txt');
-  if(!occ){ dot.style.background='var(--axis)'; txt.textContent='재실 아님'; }
-  else if(G.Tin > P.comfortHi+0.02){ dot.style.background='var(--serious)'; txt.textContent='덥다! 민원 발생 중'; }
-  else if(G.Tin < P.comfortLo-0.02){ dot.style.background='var(--s1)'; txt.textContent='춥다! 민원 발생 중'; }
-  else { dot.style.background='var(--good)'; txt.textContent='쾌적'; }
-}
-
-function tick(){
-  const sp = parseFloat($('#sp-slider').value);
-  for(let k=0;k<1;k++){
-    const r = stepSim(G.Tin, G.h, sp);
-    G.cost+=r.cost; G.pen+=r.pen; G.kwh+=r.elec; G.disc+=r.disc;
-    G.Tin=r.TinNext; G.h+=P.dt;
-    G.traj.push([G.h, G.Tin]);
+function finishRun(res){
+  $('#t-cost').textContent=fmtW(res.cost); $('#t-kwh').textContent=res.kwh.toFixed(1)+' kWh';
+  $('#t-pen').textContent=fmtW(res.pen); $('#t-disc').textContent='불쾌적 '+res.disc.toFixed(1)+' °C·h';
+  $('#t-total').textContent=fmtW(res.total);
+  if(!G.best || res.total < G.best.total){
+    G.best = res; G.bestTraj = res.traj;
+    $('#t-best').textContent=fmtW(res.total);
+    $('#t-best-sub').textContent=`${G.attempts}번째 시도에서 달성`;
   }
-  refreshTiles(); refreshBadges(); renderMpcChart(G);
-  if(G.h>=24-1e-9) finishDay();
+  $('#btn-ai').disabled=false;
+  if(!G.ai){
+    $('#verdict').innerHTML = `계획을 고쳐 몇 번이든 다시 도전해 보세요. 최고 기록이 만들어지면 <b>🤖 AI에게 도전</b>을 눌러 같은 조건으로 대결합니다.`;
+    $('#result-box').classList.remove('hidden');
+    $('#res-table').innerHTML='';
+  } else updateResultTable();
 }
-function finishDay(){
-  clearInterval(G.timer); G.running=false; G.finished=true;
-  $('#btn-start').disabled=true; $('#btn-ai').disabled=false;
-  $('#b-comfort-txt').textContent='하루 종료';
-  const box=$('#result-box'); box.classList.remove('hidden');
-  $('#res-table').innerHTML =
-   `<thead><tr><th></th><th>전기요금</th><th>민원 페널티</th><th>총비용</th><th>불쾌적</th></tr></thead>
-    <tbody><tr><td><span class="dot" style="background:var(--s1)"></span> 나</td>
-    <td>${fmtW(G.cost)}</td><td>${fmtW(G.pen)}</td><td><b>${fmtW(G.cost+G.pen)}</b></td><td>${G.disc.toFixed(1)} °C·h</td></tr></tbody>`;
-  $('#verdict').innerHTML = `수고하셨습니다. 이제 <b>같은 건물, 같은 날씨, 같은 요금표</b>로 AI(MPC)에게 도전시켜 보세요. 아래 <b>🤖 버튼</b>을 누르면 AI가 지금 이 자리에서 최적화를 계산합니다.`;
-}
-
-function startDay(){
-  Object.assign(G,{running:true,finished:false,h:0,Tin:P.T0,cost:0,pen:0,kwh:0,disc:0,traj:[[0,P.T0]],showWhy:false});
-  $('#result-box').classList.add('hidden'); $('#why-box').classList.add('hidden');
-  $('#btn-start').disabled=true; $('#btn-ai').disabled=true; $('#btn-why').disabled=true;
-  G.timer = setInterval(tick, G.tickMs);
-}
-
 function runAI(){
   $('#btn-ai').disabled=true;
   $('#t-ai').textContent='계산 중…';
   setTimeout(()=>{
-    const schedule = mpcOptimize();  // 실시간 최적화
-    // AI 하루 시뮬레이션
-    let Tin=P.T0, cost=0,pen=0,kwh=0,disc=0; const traj=[[0,Tin]];
-    for(let i=0;i<96;i++){
-      const h=i*P.dt, sp=schedule[Math.floor(h)];
-      const r=stepSim(Tin,h,sp);
-      cost+=r.cost; pen+=r.pen; kwh+=r.elec; disc+=r.disc; Tin=r.TinNext;
-      traj.push([h+P.dt, Tin]);
-    }
-    G.ai={cost,pen,kwh,disc,total:cost+pen,schedule};
-    // 애니메이션으로 AI 궤적 그리기
+    G.aiSchedule = mpcOptimize();
+    const res = simulateDay(G.aiSchedule);
+    G.ai = res;
     G.aiTraj=[]; let i=0;
     const anim=setInterval(()=>{
-      for(let k=0;k<3 && i<traj.length;k++,i++) G.aiTraj.push(traj[i]);
-      renderMpcChart(G);
-      if(i>=traj.length){ clearInterval(anim); showAIResult(); }
+      for(let k=0;k<3 && i<res.traj.length;k++,i++) G.aiTraj.push(res.traj[i]);
+      renderMpcChart();
+      if(i>=res.traj.length){ clearInterval(anim); showAIResult(); }
     }, 40);
   }, 350);
 }
+function updateResultTable(){
+  const my = G.best, a = G.ai;
+  let html = `<thead><tr><th></th><th>전기요금</th><th>민원 페널티</th><th>총비용</th><th>불쾌적</th></tr></thead><tbody>`;
+  html += `<tr><td><span class="dot" style="background:var(--s1)"></span> 나 (최고 기록, ${G.attempts}회 시도)</td>
+    <td>${fmtW(my.cost)}</td><td>${fmtW(my.pen)}</td><td><b>${fmtW(my.total)}</b></td><td>${my.disc.toFixed(1)} °C·h</td></tr>`;
+  if(a){
+    const win = a.total < my.total;
+    html += `<tr><td><span class="dot" style="background:var(--s3)"></span> AI (MPC, 1회 계산)</td>
+      <td>${fmtW(a.cost)}</td><td>${fmtW(a.pen)}</td><td class="${win?'win':''}"><b>${fmtW(a.total)}</b></td><td>${a.disc.toFixed(1)} °C·h</td></tr>`;
+  }
+  html += `</tbody>`;
+  $('#res-table').innerHTML = html;
+}
 function showAIResult(){
-  const a=G.ai, my=G.cost+G.pen;
+  const a=G.ai, my=G.best;
   $('#t-ai').textContent=fmtW(a.total);
-  $('#t-ai-sub').textContent = `요금 ${fmtW(a.cost)} · 페널티 ${fmtW(a.pen)}`;
-  const rows = $('#res-table tbody');
-  const win = a.total < my;
-  rows.insertAdjacentHTML('beforeend',
-   `<tr><td><span class="dot" style="background:var(--s3)"></span> AI (MPC)</td>
-    <td>${fmtW(a.cost)}</td><td>${fmtW(a.pen)}</td><td class="${win?'win':''}"><b>${fmtW(a.total)}</b></td><td>${a.disc.toFixed(1)} °C·h</td></tr>`);
-  const savePct = my>0 ? Math.round((1-a.total/my)*100) : 0;
+  $('#t-ai-sub').textContent=`요금 ${fmtW(a.cost)} · 페널티 ${fmtW(a.pen)}`;
+  updateResultTable();
+  const win = a.total < my.total;
+  const savePct = my.total>0 ? Math.round((1-a.total/my.total)*100) : 0;
   $('#verdict').innerHTML = win
-    ? `<b>AI 승리.</b> AI의 총비용이 여러분보다 <b>${fmtW(my-a.total)} (${savePct}%)</b> 낮습니다.
-       비결이 궁금하다면 <b>"AI 전략 해설 보기"</b>를 눌러 보세요. 힌트: AI는 아침 그래프에서 이상한 행동을 했습니다.`
-    : `<b>대단합니다! AI에 필적하는 운전입니다.</b> 혹시 전기가 쌀 때 미리 냉방(예냉)하셨나요?
-       그렇다면 여러분은 방금 <b>MPC의 핵심 아이디어를 스스로 발견</b>한 것입니다. "AI 전략 해설 보기"로 확인해 보세요.`;
+    ? `<b>AI 승리.</b> 여러분은 ${G.attempts}번 시도했지만, AI는 <b>단 한 번의 계산</b>으로 총비용을 ${fmtW(my.total-a.total)} (${savePct}%) 더 낮췄습니다.
+       <b>"AI 전략 해설 보기"</b>를 누르면 AI가 제출한 계획표(답안지)가 위 편집기에 겹쳐 표시됩니다.`
+    : `<b>대단합니다! AI를 이겼거나 필적했습니다.</b> 혹시 전기가 쌀 때 미리 냉방(예냉)하는 계획을 세우셨나요?
+       그렇다면 방금 <b>MPC의 핵심 아이디어를 스스로 발견</b>한 것입니다. "AI 전략 해설 보기"로 AI의 답안지와 비교해 보세요.`;
+  $('#result-box').classList.remove('hidden');
   $('#btn-why').disabled=false;
 }
-
-$('#btn-start').addEventListener('click', startDay);
+$('#btn-run').addEventListener('click', runMySchedule);
 $('#btn-ai').addEventListener('click', runAI);
 $('#btn-why').addEventListener('click', ()=>{
   G.showWhy=!G.showWhy;
   $('#why-box').classList.toggle('hidden', !G.showWhy);
   $('#btn-why').textContent = G.showWhy ? 'AI 전략 해설 닫기' : 'AI 전략 해설 보기';
-  renderMpcChart(G);
+  renderEditor(); renderMpcChart();
 });
 $('#btn-reset').addEventListener('click', ()=>{
-  clearInterval(G.timer);
-  Object.assign(G,{running:false,finished:false,h:0,Tin:P.T0,cost:0,pen:0,kwh:0,disc:0,traj:[],aiTraj:[],ai:null,showWhy:false});
-  $('#btn-start').disabled=false; $('#btn-ai').disabled=true; $('#btn-why').disabled=true;
-  $('#result-box').classList.add('hidden'); $('#why-box').classList.add('hidden');
+  if(G.animTimer) clearInterval(G.animTimer);
+  Object.assign(G,{schedule:Array(24).fill(28), aiSchedule:null, ai:null, traj:[], aiTraj:[],
+    attempts:0, best:null, bestTraj:null, showWhy:false, lastRun:null, animTimer:null});
+  ['t-cost','t-pen','t-total','t-best'].forEach(id=>$('#'+id).textContent='–');
+  $('#t-kwh').textContent='–'; $('#t-disc').textContent='–';
+  $('#t-best-sub').textContent='아직 실행 전';
   $('#t-ai').textContent='???'; $('#t-ai-sub').textContent='아직 도전 전';
-  refreshTiles(); refreshBadges(); renderMpcChart(G);
+  $('#attempt-info').textContent='시도 0회'; $('#sched-readout').textContent='';
+  $('#btn-ai').disabled=true; $('#btn-why').disabled=true; $('#btn-why').textContent='AI 전략 해설 보기';
+  $('#result-box').classList.add('hidden'); $('#why-box').classList.add('hidden'); $('#btn-run').disabled=false;
+  renderEditor(); renderMpcChart();
 });
-$('#sp-slider').addEventListener('input', e=>{ $('#sp-val').textContent = parseFloat(e.target.value).toFixed(1)+' °C'; });
-document.querySelectorAll('#speed-box button').forEach(b=>b.addEventListener('click',()=>{
-  document.querySelectorAll('#speed-box button').forEach(x=>x.classList.toggle('on',x===b));
-  G.tickMs=+b.dataset.ms;
-  if(G.running){ clearInterval(G.timer); G.timer=setInterval(tick,G.tickMs); }
-}));
-
-refreshTiles(); refreshBadges(); renderMpcChart(G);
+renderEditor(); renderMpcChart();
 
 /* ============================================================
-   PART 4. FDD 퀴즈
+   PART 5. FDD 관제센터 — 실시간 감지·진단·조치
    ============================================================ */
-// 정상 급기온도 모델: 운전(07-19시) → 16°C 부근, 정지 → 실내온도 근처로 상승
-function saNormal(h, day){
-  const hh = h - day*24;
-  const oa = 29 + 5*Math.sin((hh-9.5)/24*2*Math.PI);
+const MON = {
+  DAYS:12, faultAHU:2, faultStartDay:3,   // 4일차(0-기준 3) 시작
+  running:false, hour:0, tickMs:90, timer:null,
+  aiWatch:false, alarmed:false, alarmAt:null, firstCross:null,
+  repairOrdered:false, repairAt:null, repaired:false,
+  data:null, done:false,
+};
+const TH_RES = 0.6, EW_ALPHA = 0.15;
+
+function saNormal(hh, oa){
   if(hh>=7 && hh<19) return 15.8 + 0.10*(oa-28);
   return 23.5 + 0.20*(oa-28);
 }
-function makeFddData(level){
-  // level 1: 3일, AHU-2 밸브 고착(2일차 13시~) — 눈에 보이는 고장
-  // level 2: 7일, AHU-3 코일 오염 점진 진행(4일차~) — 노이즈에 묻히는 고장
-  const days = level===1 ? 3 : 7;
-  const N = days*24;
-  const ahus = [];
+function faultDeg(hour){ // AHU-3 코일 오염: 4일차부터 3일에 걸쳐 진행, 정비 후 0
+  if(MON.repaired && hour>=MON.repairAt) return 0;
+  const day = hour/24;
+  if(day < MON.faultStartDay) return 0;
+  const hh = hour%24;
+  if(hh<7 || hh>=19) return 0;
+  const progress = Math.min(1, (day-MON.faultStartDay)/3.2);
+  const load = Math.max(0,(29+5*Math.sin((hh-9.5)/24*2*Math.PI)-27)/7);
+  return 1.45*progress*load;
+}
+function initMonData(){
+  MON.data = [];
   for(let a=0;a<4;a++){
-    const rnd = mulberry32(1000 + level*100 + a*7);
-    const meas=[], pred=[];
-    for(let i=0;i<N;i++){
-      const h=i, day=Math.floor(i/24), hh=i%24;
-      const base = saNormal(h,day);
-      let fault=0;
-      if(level===1 && a===1 && (day>1 || (day===1&&hh>=13)) && hh>=7 && hh<19){
-        fault = 5.5;  // 냉수밸브 고착: 냉각 안 됨 → 급기온도 급상승
-      }
-      if(level===2 && a===2 && day>=3 && hh>=7 && hh<19){
-        const progress = Math.min(1,(day-3 + hh/24)/3.2);   // 3일에 걸쳐 서서히
-        const load = Math.max(0,(29+5*Math.sin((hh-9.5)/24*2*Math.PI)-27)/7); // 부하 클수록 드러남
-        fault = 1.45*progress*load;
-      }
-      meas.push(base + fault + gauss(rnd)*0.42);
-      pred.push(base);
+    MON.data.push({rnd:mulberry32(2000+a*13), meas:[], pred:[], ew:[], lastEw:0, status:'ok'});
+  }
+}
+function monStep(){ // 1시간 진행
+  const hour = MON.hour;
+  const hh = hour%24;
+  const oa = 29 + 5*Math.sin((hh-9.5)/24*2*Math.PI);
+  for(let a=0;a<4;a++){
+    const d=MON.data[a];
+    const base = saNormal(hh, oa);
+    const f = (a===MON.faultAHU) ? faultDeg(hour) : 0;
+    const m = base + f + gauss(d.rnd)*0.42;
+    d.meas.push(m); d.pred.push(base);
+    const r = m-base;
+    d.lastEw = d.meas.length===1 ? r : (1-EW_ALPHA)*d.lastEw + EW_ALPHA*r;
+    d.ew.push(d.lastEw);
+    // 최초 임계 초과 기록 (AI ON 여부와 무관하게 기록)
+    if(a===MON.faultAHU && MON.firstCross===null && hour>24 && Math.abs(d.lastEw)>TH_RES){
+      MON.firstCross = hour;
     }
-    ahus.push({meas, pred});
   }
-  const faultIdx = level===1 ? 1 : 2;
-  return {days, N, ahus, faultIdx,
-    faultName: level===1 ? '냉수 코일 밸브 고착 (2일차 오후부터 냉각 불능)' : '냉각코일 오염에 의한 성능 저하 (4일차부터 서서히 진행)'};
-}
-
-// EWMA 잔차
-function residuals(ahu){
-  const res = ahu.meas.map((m,i)=>m-ahu.pred[i]);
-  const ew=[]; let e=0;
-  res.forEach((r,i)=>{ e = i===0? r : 0.85*e + 0.15*r; ew.push(e); });
-  return {res, ew};
-}
-
-const FCH={W:480,H:150,L:36,R:8,T:10,B:20};
-function fddChart(ahu, days, yMin, yMax, opts={}){
-  const N=ahu.meas.length;
-  const fx=i=>FCH.L+(FCH.W-FCH.L-FCH.R)*i/(N-1);
-  const fy=v=>FCH.T+(FCH.H-FCH.T-FCH.B)*(1-(v-yMin)/(yMax-yMin));
-  const s=[];
-  s.push(`<svg viewBox="0 0 ${FCH.W} ${FCH.H}" style="width:100%;display:block;" font-size="11">`);
-  for(let d=0;d<=days;d++){
-    const x=fx(Math.min(d*24,N-1));
-    s.push(`<line x1="${x}" y1="${FCH.T}" x2="${x}" y2="${FCH.H-FCH.B}" stroke="var(--grid)" stroke-width="1"/>`);
-    if(d<days) s.push(`<text x="${fx(d*24+12)}" y="${FCH.H-6}" text-anchor="middle" fill="var(--ink-3)">${d+1}일차</text>`);
+  MON.hour++;
+  // 정비 완료 이벤트
+  if(MON.repairOrdered && !MON.repaired && MON.hour>=MON.repairAt){
+    MON.repaired = true;
+    MON.data[MON.faultAHU].status='ok';
+    banner('green', `<b>정비 완료 (${dayStr(MON.repairAt)})</b> — 냉각코일 세정 후 잔차가 허용범위로 복귀했습니다. AHU-3 상태: 정상.
+      <span class="small">경보 → 진단 → 조치 → 복구까지, 사람의 개입은 "승인 버튼 한 번"이었습니다.</span>`, true);
   }
-  const yt = opts.yTicks || [16,20,24];
-  yt.forEach(t=>{
-    s.push(`<line x1="${FCH.L}" y1="${fy(t)}" x2="${FCH.W-FCH.R}" y2="${fy(t)}" stroke="var(--grid)" stroke-width="1"/>`);
-    s.push(`<text x="${FCH.L-4}" y="${fy(t)+3}" text-anchor="end" fill="var(--ink-3)">${t}${opts.unit||'°'}</text>`);
+  // AI 감시 경보
+  if(MON.aiWatch && !MON.alarmed && MON.firstCross!==null && MON.hour>=MON.firstCross){
+    fireAlarm();
+  }
+  if(MON.hour >= MON.DAYS*24){ endMonitoring(); return; }
+}
+function dayStr(hour){ return `${Math.floor(hour/24)+1}일차 ${String(hour%24).padStart(2,'0')}시`; }
+
+function fireAlarm(){
+  MON.alarmed = true; MON.alarmAt = MON.hour;
+  MON.data[MON.faultAHU].status='alarm';
+  pauseMon();
+  banner('red', `
+    <b>🚨 AI 경보 — AHU-3 이상 감지 (${dayStr(MON.firstCross)}에 임계 초과)</b><br>
+    <b>감지:</b> 잔차(실측−예측)가 허용범위 ±${TH_RES}°C를 벗어나 상승 추세.<br>
+    <b>진단:</b> 부하가 클수록(한낮) 급기온도가 더 상승하는 패턴 → <b>냉각코일 오염 또는 냉수밸브 성능저하</b> 의심.
+    급격한 고장이 아니라 서서히 진행 중 — 원시 그래프에서는 아직 보이지 않는 수준입니다.<br>
+    <b>권장조치:</b> 냉각코일 점검·세정 오더 발행 (예상 소요 2시간, 익일 오전 권장)<br>
+    <button class="btn alarm" id="btn-approve" style="margin-top:8px;">✓ 조치 승인 — 정비 오더 발행</button>`);
+}
+function banner(kind, html, autoHideOthers){
+  const box=$('#alarm-box');
+  const div=document.createElement('div');
+  div.className='callout '+(kind==='red'?'red':kind==='green'?'green':'');
+  div.innerHTML=html;
+  box.prepend(div);
+  const btn = div.querySelector('#btn-approve');
+  if(btn) btn.addEventListener('click', ()=>{
+    MON.repairOrdered=true;
+    const nextMorning = (Math.floor(MON.hour/24)+1)*24 + 8; // 익일 08시
+    MON.repairAt = nextMorning;
+    MON.data[MON.faultAHU].status='repair';
+    btn.outerHTML = `<span class="small"><b>✓ 정비 오더 발행됨</b> — ${dayStr(nextMorning)} 정비 예정. 관제를 계속합니다.</span>`;
+    resumeMon();
   });
-  if(opts.threshold){
-    const th=opts.threshold;
-    s.push(`<rect x="${FCH.L}" y="${fy(th)}" width="${FCH.W-FCH.L-FCH.R}" height="${fy(-th)-fy(th)}" fill="var(--band)"/>`);
-    s.push(`<text x="${FCH.L+4}" y="${fy(th)-3}" text-anchor="start" fill="var(--ink-3)">허용범위 ±${th}°C</text>`);
+}
+function endMonitoring(){
+  pauseMon(); MON.done=true; MON.running=false;
+  $('#mon-status').innerHTML='<span class="dot" style="background:var(--axis)"></span><b>관제 종료</b>';
+  // 요약: 낭비 에너지 추정
+  let wasted=0; // 고장 시작~정비까지 낭비 (냉각능력 저하 보상 운전 가정)
+  for(let h=MON.faultStartDay*24; h<Math.min(MON.repairAt??MON.DAYS*24, MON.DAYS*24); h++){
+    wasted += 1.8*faultDegAt(h);
   }
-  if(opts.pred){
-    s.push(`<path d="${ahu.pred.map((v,i)=>(i?'L':'M')+fx(i).toFixed(1)+','+fy(v).toFixed(1)).join('')}" fill="none" stroke="var(--ink-3)" stroke-width="1.5" stroke-dasharray="4 3"/>`);
+  let wasted30=0; // 미감지 시 30일 방치 가정
+  for(let h=MON.faultStartDay*24; h<30*24; h++){ wasted30 += 1.8*faultDegNoRepair(h); }
+  const won = k => Math.round(k*150/100)*100;
+  const detectDelay = MON.firstCross ? ((MON.firstCross - MON.faultStartDay*24)/24).toFixed(1) : '-';
+  banner('', `
+    <b>📋 관제 요약 (12일)</b><br>
+    · 고장 발생: <b>4일차</b> (냉각코일 오염, 서서히 진행)<br>
+    · AI 감지: <b>${MON.firstCross?dayStr(MON.firstCross):'감시 미작동'}</b> — 발생 후 약 ${detectDelay}일 만에 감지<br>
+    · 조치 완료: <b>${MON.repairAt?dayStr(MON.repairAt):'미조치'}</b> · 낭비된 에너지: 약 ${wasted.toFixed(0)} kWh (${fmtW(won(wasted))})<br>
+    · 만약 AI가 없어 <b>월 1회 정기점검까지 몰랐다면</b>: 약 ${wasted30.toFixed(0)} kWh (${fmtW(won(wasted30))}) 낭비 —
+    <b>조기 감지로 ${Math.round((1-wasted/Math.max(wasted30,1))*100)}%를 아꼈습니다.</b><br>
+    <span class="small">이 감지의 핵심 부품(정상 상태 예측모델)을 이번 학기 10–12주차에 직접 만듭니다.</span>`);
+}
+function faultDegAt(hour){ // 정비 반영
+  if(MON.repairAt && hour>=MON.repairAt) return 0;
+  return faultDegRaw(hour);
+}
+function faultDegNoRepair(hour){ return faultDegRaw(hour); }
+function faultDegRaw(hour){
+  const day=hour/24, hh=hour%24;
+  if(day<MON.faultStartDay || hh<7 || hh>=19) return 0;
+  const progress=Math.min(1,(day-MON.faultStartDay)/3.2);
+  const load=Math.max(0,(29+5*Math.sin((hh-9.5)/24*2*Math.PI)-27)/7);
+  return 1.45*progress*load;
+}
+
+/* ---------- 관제 차트 ---------- */
+const MC={W:470,H:210,L:36,R:8,T:12,B:18, rawH:100, resH:62, gap:14};
+function monCharts(a){
+  const d=MON.data[a], N=MON.DAYS*24;
+  const fx=i=>MC.L+(MC.W-MC.L-MC.R)*i/(N-1);
+  const rawY=v=>MC.T+MC.rawH*(1-(v-13)/(27-13));
+  const resTop=MC.T+MC.rawH+MC.gap;
+  const resY=v=>resTop+MC.resH*(1-(v+2.2)/4.4);
+  const s=[];
+  s.push(`<svg viewBox="0 0 ${MC.W} ${MC.H}" style="width:100%;display:block;" font-size="10.5">`);
+  // 일 구분선
+  for(let dd=0;dd<=MON.DAYS;dd++){
+    const x=fx(Math.min(dd*24,N-1));
+    s.push(`<line x1="${x}" y1="${MC.T}" x2="${x}" y2="${MC.H-MC.B}" stroke="var(--grid)" stroke-width="1"/>`);
+    if(dd<MON.DAYS && dd%2===0) s.push(`<text x="${fx(dd*24+12)}" y="${MC.H-5}" text-anchor="middle" fill="var(--ink-3)">${dd+1}일</text>`);
   }
-  const data = opts.data || ahu.meas;
-  let color = opts.color || 'var(--s1)';
-  s.push(`<path d="${data.map((v,i)=>(i?'L':'M')+fx(i).toFixed(1)+','+fy(Math.max(yMin,Math.min(yMax,v))).toFixed(1)).join('')}" fill="none" stroke="${color}" stroke-width="1.8"/>`);
-  if(opts.alarmAt!=null && opts.alarmAt>=0){
-    const ax = Math.min(fx(opts.alarmAt), FCH.W-FCH.R-26);
-    s.push(`<circle cx="${fx(opts.alarmAt)}" cy="${fy(data[opts.alarmAt])}" r="5" fill="none" stroke="var(--critical)" stroke-width="2"/>`);
-    s.push(`<text x="${ax}" y="${Math.max(fy(data[opts.alarmAt])-9, FCH.T+10)}" text-anchor="middle" fill="var(--critical)" font-weight="700">경보!</text>`);
+  // 원시 급기온도
+  [16,24].forEach(t=>{
+    s.push(`<line x1="${MC.L}" y1="${rawY(t)}" x2="${MC.W-MC.R}" y2="${rawY(t)}" stroke="var(--grid)" stroke-width="1"/>`);
+    s.push(`<text x="${MC.L-4}" y="${rawY(t)+3}" text-anchor="end" fill="var(--ink-3)">${t}°</text>`);
+  });
+  s.push(`<text x="${MC.L+2}" y="${MC.T+2}" fill="var(--ink-3)" font-size="10">급기온도 실측</text>`);
+  if(d.meas.length>1){
+    s.push(`<path d="${d.meas.map((v,i)=>(i?'L':'M')+fx(i).toFixed(1)+','+rawY(Math.max(13,Math.min(27,v))).toFixed(1)).join('')}" fill="none" stroke="var(--s1)" stroke-width="1.4"/>`);
+  }
+  // 잔차 영역
+  s.push(`<text x="${MC.L+2}" y="${resTop+2}" fill="var(--ink-3)" font-size="10">AI 잔차 감시 ${MON.aiWatch?'':'(OFF)'}</text>`);
+  if(MON.aiWatch){
+    s.push(`<rect x="${MC.L}" y="${resY(TH_RES)}" width="${MC.W-MC.L-MC.R}" height="${resY(-TH_RES)-resY(TH_RES)}" fill="var(--band)"/>`);
+    s.push(`<line x1="${MC.L}" y1="${resY(0)}" x2="${MC.W-MC.R}" y2="${resY(0)}" stroke="var(--grid)" stroke-width="1"/>`);
+    if(d.ew.length>1){
+      const alarmed = a===MON.faultAHU && MON.alarmed;
+      s.push(`<path d="${d.ew.map((v,i)=>(i?'L':'M')+fx(i).toFixed(1)+','+resY(Math.max(-2.2,Math.min(2.2,v))).toFixed(1)).join('')}" fill="none" stroke="${alarmed?'var(--critical)':'var(--s3)'}" stroke-width="1.6"/>`);
+    }
+    if(a===MON.faultAHU && MON.alarmed && MON.firstCross!==null && MON.firstCross<d.ew.length){
+      const ax=Math.min(fx(MON.firstCross), MC.W-MC.R-24);
+      s.push(`<circle cx="${fx(MON.firstCross)}" cy="${resY(d.ew[MON.firstCross])}" r="4.5" fill="none" stroke="var(--critical)" stroke-width="2"/>`);
+      s.push(`<text x="${ax}" y="${resY(d.ew[MON.firstCross])-7}" text-anchor="middle" fill="var(--critical)" font-weight="700">경보</text>`);
+    }
+    if(MON.repairAt && MON.repaired){
+      s.push(`<line x1="${fx(MON.repairAt)}" y1="${resTop}" x2="${fx(MON.repairAt)}" y2="${resTop+MC.resH}" stroke="var(--good)" stroke-width="1.5" stroke-dasharray="4 3"/>`);
+      if(a===MON.faultAHU) s.push(`<text x="${fx(MON.repairAt)}" y="${resTop-2}" text-anchor="middle" fill="var(--good)" font-size="10" font-weight="700">정비</text>`);
+    }
+  } else {
+    s.push(`<rect x="${MC.L}" y="${resTop+8}" width="${MC.W-MC.L-MC.R}" height="${MC.resH-12}" fill="var(--band)" rx="6"/>`);
+    s.push(`<text x="${(MC.L+MC.W-MC.R)/2}" y="${resTop+MC.resH/2+4}" text-anchor="middle" fill="var(--ink-3)">AI 감시가 꺼져 있습니다 — 사람의 눈으로 이상을 찾아보세요</text>`);
   }
   s.push('</svg>');
   return s.join('');
 }
-
-const F = { level:1, data:null, answered:false };
-
-function renderFdd(){
-  F.data = makeFddData(F.level);
-  F.answered=false;
-  const grid=$('#fdd-grid'); grid.innerHTML='';
-  $('#fdd-feedback').classList.add('hidden');
-  $('#btn-fdd-ai').classList.add('hidden');
-  $('#fdd-ai-box').classList.add('hidden');
-  F.data.ahus.forEach((ahu,i)=>{
-    const div=document.createElement('div');
-    div.className='ahu-card'; div.dataset.idx=i;
-    div.innerHTML = `<h4>AHU-${i+1} 급기온도 <span class="ahu-tag" style="visibility:hidden"></span></h4>` +
-      fddChart(ahu, F.data.days, 13, 27, {yTicks:[16,20,24]});
-    div.addEventListener('click', ()=>guess(i));
-    grid.appendChild(div);
-  });
+function renderMon(){
+  const grid=$('#fdd-grid');
+  const tags={ok:['tag-ok','정상'], alarm:['tag-bad','경보'], repair:['tag-rep','정비 대기'], off:['tag-off','—']};
+  grid.innerHTML = MON.data.map((d,a)=>{
+    const st = tags[d.status]||tags.ok;
+    const cls = d.status==='alarm'?'alarm':(d.status==='repair'?'repair':'');
+    return `<div class="ahu-card ${cls}"><h4>AHU-${a+1} <span class="ahu-tag ${st[0]}">${MON.aiWatch?st[1]:'감시 OFF'}</span></h4>${monCharts(a)}</div>`;
+  }).join('');
+  $('#mon-clock').textContent = MON.hour<MON.DAYS*24 ? dayStr(MON.hour) : `${MON.DAYS}일 종료`;
 }
-
-function guess(i){
-  if(F.answered) return;
-  F.answered=true;
-  const correct = i===F.data.faultIdx;
-  document.querySelectorAll('.ahu-card').forEach(c=>{
-    const idx=+c.dataset.idx;
-    const tag=c.querySelector('.ahu-tag');
-    tag.style.visibility='visible';
-    if(idx===F.data.faultIdx){ c.classList.add('correct'); tag.className='ahu-tag tag-bad'; tag.textContent='고장'; }
-    else { tag.className='ahu-tag tag-ok'; tag.textContent='정상'; }
-    if(idx===i && !correct) c.classList.add('wrong');
-  });
-  const fb=$('#fdd-feedback'); fb.classList.remove('hidden');
-  if(F.level===1){
-    fb.innerHTML = `<div class="callout" style="border-left-color:${correct?'var(--good)':'var(--critical)'}">
-      <b>${correct?'정답!':'아쉽습니다.'}</b> 고장은 <b>AHU-${F.data.faultIdx+1}</b> — ${F.data.faultName}.
-      이 정도로 <b>확 무너지는 고장은 사람 눈으로도 찾을 수 있습니다.</b>
-      그럼 2단계로 가 볼까요? 실제 현장의 고장은 훨씬 교활합니다.</div>`;
-    $('#btn-fdd-ai').classList.add('hidden');
-  } else {
-    fb.innerHTML = `<div class="callout" style="border-left-color:${correct?'var(--good)':'var(--critical)'}">
-      <b>${correct?'놀랍네요, 정답입니다! (운이 좋았을 수도?)':'못 찾는 게 정상입니다.'}</b>
-      고장은 <b>AHU-${F.data.faultIdx+1}</b> — ${F.data.faultName}.
-      변화량이 노이즈(±0.4°C)와 비슷해서 <b>사람 눈으로는 사실상 구분이 불가능</b>합니다.
-      그런데 AI는 찾아냅니다. 아래 버튼을 눌러 보세요.</div>`;
-    $('#btn-fdd-ai').classList.remove('hidden');
-  }
+function monTick(){
+  monStep();
+  if(MON.hour%3===0 || MON.hour>=MON.DAYS*24) renderMon(); // 3시간마다 리렌더
 }
-
-function showFddAI(){
-  const box=$('#fdd-ai-box'); box.classList.remove('hidden');
-  const grid=$('#fdd-res-grid'); grid.innerHTML='';
-  const TH=0.7;
-  let alarmDay=null;
-  F.data.ahus.forEach((ahu,i)=>{
-    const {ew}=residuals(ahu);
-    let alarmAt=-1;
-    for(let k=24;k<ew.length;k++){ if(Math.abs(ew[k])>TH){ alarmAt=k; break; } }
-    if(i===F.data.faultIdx && alarmAt>=0) alarmDay = Math.floor(alarmAt/24)+1;
-    const div=document.createElement('div');
-    div.className='ahu-card'; div.style.cursor='default';
-    const isF = i===F.data.faultIdx;
-    div.innerHTML = `<h4>AHU-${i+1} 잔차 (실측 − 예측) <span class="ahu-tag ${isF?'tag-bad':'tag-ok'}">${isF?'경보':'정상'}</span></h4>`+
-      fddChart(ahu, F.data.days, -2.2, 2.2, {data:ew, yTicks:[-2,0,2], threshold:TH,
-        color: isF ? 'var(--critical)' : 'var(--s1)', alarmAt: alarmAt>=0? alarmAt : null, unit:'°'});
-    grid.appendChild(div);
-  });
-  $('#fdd-ai-verdict').innerHTML =
-    `<b>AI는 ${alarmDay??4}일차에 이미 경보를 울렸습니다.</b> 비결은 간단합니다 —
-     정상 데이터를 학습한 <b>예측모델</b>이 "지금쯤 이래야 한다"를 알고 있고, 실측과의 차이(잔차)만 감시하면
-     노이즈 속의 미세한 이상이 선명하게 드러납니다. 이 예측모델(회귀)과 정상/고장 판별(분류)을
-     <b>이번 학기 10~12주차에 여러분이 직접 만듭니다.</b>`;
-  box.scrollIntoView({behavior:'smooth', block:'start'});
+function startMon(){
+  initMonData();
+  Object.assign(MON,{running:true,hour:0,aiWatch:false,alarmed:false,alarmAt:null,firstCross:null,
+    repairOrdered:false,repairAt:null,repaired:false,done:false});
+  $('#alarm-box').innerHTML='';
+  $('#btn-mon').disabled=true; $('#btn-ai-watch').disabled=false;
+  $('#btn-ai-watch').textContent='AI 감시 ON';
+  $('#mon-status').innerHTML='<span class="dot" style="background:var(--good)"></span><b>관제 중 — 사람 눈 모드</b>';
+  MON.timer=setInterval(monTick, MON.tickMs);
 }
-
-$('#lvl1-btn').addEventListener('click',()=>{ F.level=1; $('#lvl1-btn').classList.add('on'); $('#lvl2-btn').classList.remove('on'); renderFdd(); });
-$('#lvl2-btn').addEventListener('click',()=>{ F.level=2; $('#lvl2-btn').classList.add('on'); $('#lvl1-btn').classList.remove('on'); renderFdd(); });
-$('#btn-fdd-reset').addEventListener('click', renderFdd);
-$('#btn-fdd-ai').addEventListener('click', showFddAI);
-renderFdd();
+function pauseMon(){ if(MON.timer){clearInterval(MON.timer); MON.timer=null;} renderMon(); }
+function resumeMon(){ if(!MON.timer && !MON.done) MON.timer=setInterval(monTick, MON.tickMs); }
+$('#btn-mon').addEventListener('click', startMon);
+$('#btn-ai-watch').addEventListener('click', ()=>{
+  MON.aiWatch=!MON.aiWatch;
+  $('#btn-ai-watch').textContent = MON.aiWatch?'AI 감시 OFF':'AI 감시 ON';
+  $('#mon-status').innerHTML = MON.aiWatch
+    ? '<span class="dot" style="background:var(--s3)"></span><b>관제 중 — AI 잔차 감시 작동</b>'
+    : '<span class="dot" style="background:var(--good)"></span><b>관제 중 — 사람 눈 모드</b>';
+  renderMon();
+  // 켜는 순간 이미 임계 초과 상태라면 즉시 경보
+  if(MON.aiWatch && !MON.alarmed && MON.firstCross!==null && MON.hour>=MON.firstCross) fireAlarm();
+});
+document.querySelectorAll('#fdd-speed button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('#fdd-speed button').forEach(x=>x.classList.toggle('on',x===b));
+  MON.tickMs=+b.dataset.ms;
+  if(MON.timer){ clearInterval(MON.timer); MON.timer=setInterval(monTick, MON.tickMs); }
+}));
+$('#btn-fdd-reset').addEventListener('click', ()=>{
+  pauseMon();
+  Object.assign(MON,{running:false,hour:0,aiWatch:false,alarmed:false,alarmAt:null,firstCross:null,
+    repairOrdered:false,repairAt:null,repaired:false,done:false});
+  initMonData();
+  $('#alarm-box').innerHTML='';
+  $('#btn-mon').disabled=false; $('#btn-ai-watch').disabled=true; $('#btn-ai-watch').textContent='AI 감시 ON';
+  $('#mon-status').innerHTML='<span class="dot" style="background:var(--axis)"></span><b>대기 중</b>';
+  renderMon();
+});
+initMonData(); renderMon();
 </script>
 </body>
 </html>
